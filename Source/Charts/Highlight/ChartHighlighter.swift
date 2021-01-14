@@ -14,6 +14,18 @@ import CoreGraphics
 
 open class ChartHighlighter : NSObject, IHighlighter
 {
+ 
+    /**
+     This value is based on the Apple HMI recommandation : minimum 'interactive' target size of 44 x 44px, so a 22px radius circle around the tap point
+     */
+    private let minimum_target_size = CGFloat(44)
+    
+    /**
+     The minimum distance between a tap location and a trigger point
+     This value is based on the Apple HMI recommandation (minimum 'interactive' target size of 44 x 44px, so a 22px radius circle around the tap point)
+     */
+    private let minimum_radius_size = CGFloat(22)
+    
     /// instance of the data-provider
     @objc open weak var chart: ChartDataProvider?
     
@@ -123,20 +135,90 @@ open class ChartHighlighter : NSObject, IHighlighter
         axis: YAxis.AxisDependency?,
         minSelectionDistance: CGFloat) -> Highlight?
     {
+        var distanceIsFromLineChart = false
         var distance = minSelectionDistance
         var closest: Highlight?
+        var highlighterChartData : ChartData?
+        
+        let chartFrame = (chart as! UIView).frame
+        
+        // We need to known the step width to constrain the closest selection distance check on "Bar" chart data
+        let stepWidth = chartFrame.size.width / CGFloat(chart!.xRange)
+    
         
         for high in closestValues
         {
+            highlighterChartData = nil
+            
             if axis == nil || high.axis == axis
             {
+                // 1. Compute the distance between the finger tap position and the chart origin coordinate
                 let cDistance = getDistance(x1: x, y1: y, x2: high.xPx, y2: high.yPx)
-
-                if cDistance < distance
-                {
-                    closest = high
-                    distance = cDistance
+                
+                // 1bis. Some checks are based on the highlighter related chart data.
+                let allData = (chart as? CombinedChartDataProvider)?.combinedData?.allData
+                if allData?.indices.contains(high.dataIndex) == true {
+                    highlighterChartData = allData![high.dataIndex]
                 }
+                
+                
+                // 2. depending on the chart data, there's some additional tests to pass
+                switch highlighterChartData {
+                case is LineChartData:
+                    /*
+                     We consider the chart line points have a clickable area around to.
+                     Thus, the clickable area is based on a circle, with a radius based on the Apple HMI recommandation (arbitrary choice)
+                     */
+                    
+                    // 2a. test whether it's the first distance to take into account, or if the finger tap location is not too far from the chart line
+                    guard cDistance <= minimum_radius_size else { continue }
+                    
+                    // 2b. We replace the previous closest chart line distance only the previous one is from another chart type,
+                    //     or if it's a smaller value
+                    guard !distanceIsFromLineChart || cDistance < distance else { continue }
+                    
+                    distanceIsFromLineChart = true
+                    
+                default:
+                    /*
+                     Here are all other chart cases.
+                     Current implementation is specific to the Bar Chart, without any thought to the others.
+                     Thus, we consider the tap location must be "inside" the bar to be valid.
+                     Moreover, the current closest distance must not be a line Chart : a line chart has a higher priority.
+                     If you need to handle other cases in a different way, be free to update the code.
+                     */
+                    
+                    // 2a. Select the closest 'high'lighter
+                    // However, a 'Line Chart Data' has a higher priority than any other chart data type
+                    guard cDistance < distance else { continue }
+                    
+                    // 2b. Get the bar bottom position
+                    var barChartBottom = chartFrame.origin.y + chartFrame.size.height
+                    
+                    if highlighterChartData is BarChartData,
+                       let chart = self.chart as? BarLineScatterCandleBubbleChartDataProvider {
+                        
+                        if let dataSet = highlighterChartData?.dataSets.first,
+                            let bottomValue = (dataSet.entryForXValue(high.x, closestToY: .nan) as? BarChartDataEntry)?.yValues?.first
+                        {
+                            let px = chart.getTransformer(forAxis: dataSet.axisDependency).pixelForValues(x: high.x, y: bottomValue)
+                            barChartBottom = px.y
+                        }
+                    }
+                    
+                    
+                   // 2c. Check whether the tap location is inside the bar, and if the current nearest distance is not from a line chart point
+                    guard x >= high.xPx - stepWidth
+                            && x <= high.xPx + stepWidth
+                            && y < barChartBottom
+                            && !distanceIsFromLineChart else { continue }
+                }
+                
+                
+                // 4. This 'high'lighter becomes the closest one to the finger tap
+                closest = high
+                distance = cDistance
+                
             }
         }
         
