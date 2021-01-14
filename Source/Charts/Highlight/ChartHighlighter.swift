@@ -16,7 +16,7 @@ open class ChartHighlighter : NSObject, IHighlighter
 {
  
     /**
-     This value is based on the Apple HMI recommandation : minimum 'interactive' target size of 44 x 44px, so a 22px radius circle around the tap point
+     This value is based on the Apple HMI recommandation : minimum 'interactive' target size of 44 x 44px
      */
     private let minimum_target_size = CGFloat(44)
     
