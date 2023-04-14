@@ -1,6 +1,14 @@
 # Changelog
 
-## [v3.6.1](https://github.com/NicolasVas/Charts/tree/v3.6.0) (2020-09-21)
+## [v3.6.3](https://github.com/NicolasVas/Charts/tree/v3.6.3) (2023-04-14)
+
+[Full Changelog](https://github.com/NicolasVas/Charts/compare/v3.6.2...v3.6.3)
+
+## [v3.6.2](https://github.com/NicolasVas/Charts/tree/v3.6.2) (2020-10-19)
+
+[Full Changelog](https://github.com/NicolasVas/Charts/compare/v3.6.1...v3.6.2)
+
+## [v3.6.1](https://github.com/NicolasVas/Charts/tree/v3.6.1) (2020-09-21)
 
 [Full Changelog](https://github.com/NicolasVas/Charts/compare/v3.6.0...v3.6.1)
 
